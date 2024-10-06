@@ -57,9 +57,37 @@
                     <label for="year">Enrollment Year:</label>
                     <input type="number" id="year" required>
                 </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="birthdate">Birthdate:</label>
+                    <input type="date" id="birthdate" required>
+                </div>
                 <button type="submit">Generate AIM ID & Passkey</button>
             </form>
             <div id="result" class="result"></div>
+        </div>
+
+        <h2>Reset Passkey</h2>
+        <div id="reset-passkey-section">
+            <form id="reset-passkey-form">
+                <div class="form-group">
+                    <label for="reset-aim-id">AIM ID:</label>
+                    <input type="text" id="reset-aim-id" required>
+                </div>
+                <div class="form-group">
+                    <label for="reset-email">Email:</label>
+                    <input type="email" id="reset-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="reset-birthdate">Birthdate:</label>
+                    <input type="date" id="reset-birthdate" required>
+                </div>
+                <button type="submit">Reset Passkey</button>
+            </form>
+            <div id="reset-result" class="result"></div>
         </div>
 
         <h2>View Your AIM ID</h2>
@@ -76,26 +104,25 @@
     </div>
 
     <!-- Firebase integration -->
-    <script type="module">
-        // Import Firebase dependencies
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+    
+    <script>
         // Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyAu3JiQ8WgZJUtCIOpor37OIDO1p-Z8hlA",
-            authDomain: "app-store-d1302.firebaseapp.com",
-            databaseURL: "https://app-store-d1302.firebaseio.com",
-            projectId: "app-store-d1302",
-            storageBucket: "app-store-d1302.appspot.com",
-            messagingSenderId: "984027188738",
-            appId: "1:984027188738:web:a84d6a6372a3e00ab3e11b",
-            measurementId: "G-TR1MY9S11"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
         };
 
         // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
         // Function to generate AIM ID
         function generateAIMID(name, year, branchCode) {
@@ -125,31 +152,68 @@
             const name = document.getElementById('name').value;
             const branch = document.getElementById('branch').value;
             const year = document.getElementById('year').value;
+            const email = document.getElementById('email').value;
+            const birthdate = document.getElementById('birthdate').value;
 
             // Generate AIM ID and Passkey
             const aimID = generateAIMID(name, year, branch);
             const passkey = generatePasskey();
 
             // Save user data to Firebase
-            const dbRef = ref(db, 'users/' + passkey);
-            set(dbRef, {
+            db.ref('users/' + passkey).set({
                 name: name,
                 aimID: aimID,
                 branch: branch,
-                year: year
-            }).then(() => {
-                // Display result
-                const result = document.getElementById('result');
-                result.innerHTML = `
-                    <p><strong>AIM ID:</strong> ${aimID}</p>
-                    <p><strong>Passkey:</strong> ${passkey}</p>
-                    <p>Keep your passkey safe to view your AIM ID later.</p>
-                `;
-                // Reset form
-                document.getElementById('signup-form').reset();
-            }).catch((error) => {
-                console.error('Error writing to Firebase:', error);
+                year: year,
+                email: email,
+                birthdate: birthdate
             });
+
+            // Display result
+            const result = document.getElementById('result');
+            result.innerHTML = `
+                <p><strong>AIM ID:</strong> ${aimID}</p>
+                <p><strong>Passkey:</strong> ${passkey}</p>
+                <p>Keep your passkey safe to view your AIM ID later.</p>
+            `;
+
+            // Reset form
+            document.getElementById('signup-form').reset();
+        });
+
+        // Handle reset passkey form submission
+        document.getElementById('reset-passkey-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const aimID = document.getElementById('reset-aim-id').value;
+            const email = document.getElementById('reset-email').value;
+            const birthdate = document.getElementById('reset-birthdate').value;
+
+            // Check if AIM ID and email match in Firebase
+            db.ref('users').orderByChild('aimID').equalTo(aimID).once('value', function(snapshot) {
+                let found = false;
+                snapshot.forEach(function(childSnapshot) {
+                    const userData = childSnapshot.val();
+                    if (userData.email === email && userData.birthdate === birthdate) {
+                        found = true;
+                        const newPasskey = generatePasskey();
+                        db.ref('users/' + childSnapshot.key).update({ passkey: newPasskey });
+
+                        const resetResult = document.getElementById('reset-result');
+                        resetResult.innerHTML = `
+                            <p><strong>New Passkey:</strong> ${newPasskey}</p>
+                            <p>Your passkey has been successfully reset.</p>
+                        `;
+                    }
+                });
+                if (!found) {
+                    const resetResult = document.getElementById('reset-result');
+                    resetResult.innerHTML = `<p style="color:red;">Invalid details provided!</p>`;
+                }
+            });
+
+            // Reset form
+            document.getElementById('reset-passkey-form').reset();
         });
 
         // Handle view AIM ID form submission
@@ -159,20 +223,17 @@
             const passkey = document.getElementById('passkey').value;
 
             // Check if passkey exists in Firebase
-            const dbRef = ref(db);
-            get(child(dbRef, `users/${passkey}`)).then((snapshot) => {
+            db.ref('users/' + passkey).get().then((snapshot) => {
                 if (snapshot.exists()) {
                     const userData = snapshot.val();
                     const viewResult = document.getElementById('view-result');
                     viewResult.innerHTML = `
-                        <p><strong>AIM ID:</strong> ${userData.aimID}</p>
+                        <p><strong>Your AIM ID:</strong> ${userData.aimID}</p>
                     `;
                 } else {
                     const viewResult = document.getElementById('view-result');
-                    viewResult.innerHTML = `<p style="color:red;">Invalid Passkey!</p>`;
+                    viewResult.innerHTML = `<p style="color:red;">Invalid passkey!</p>`;
                 }
-            }).catch((error) => {
-                console.error('Error fetching from Firebase:', error);
             });
 
             // Reset form
