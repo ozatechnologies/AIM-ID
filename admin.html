@@ -73,7 +73,7 @@
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>AIM ID</th> <!-- Added AIM ID column -->
+                        <th>aimID</th>
                         <th>Branch</th>
                         <th>Year</th>
                         <th>Email</th>
@@ -150,10 +150,10 @@
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${user.name}</td>
-                        <td>${user.aimId || 'Not available'}</td> <!-- Display AIM ID -->
+                        <td>${user.aimID || 'Not available'}</td> <!-- Display aimID -->
                         <td>${user.branch}</td>
                         <td>${user.year}</td>
-                        <td>${user.email}</td>
+                        <td>${user.email || 'Not available'}</td>
                         <td>${user.meritRank || 'Not available'}</td>
                         <td><button class="credit-btn" data-passkey="${passkey}">Select User</button></td>
                     `;
