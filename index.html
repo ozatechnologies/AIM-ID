@@ -117,25 +117,26 @@
     </div>
 
     <!-- Firebase integration -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
-    
-    <script>
-        // Firebase configuration
+    <script type="module">
+        // Import Firebase and its services
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+        import { getDatabase, ref, set, get, child, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+
+        // Your Firebase configuration
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID"
+            apiKey: "AIzaSyAu3JiQ8WgZJUtCIOpor37OIDO1p-Z8hlA",
+            authDomain: "app-store-d1302.firebaseapp.com",
+            databaseURL: "https://app-store-d1302.firebaseio.com",
+            projectId: "app-store-d1302",
+            storageBucket: "app-store-d1302.appspot.com",
+            messagingSenderId: "984027188738",
+            appId: "1:984027188738:web:a84d6a6372a3e00ab3e11b",
+            measurementId: "G-TR1MY9S11P"
         };
 
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
         // Function to generate AIM ID
         function generateAIMID(name, year, branchCode) {
@@ -173,7 +174,7 @@
             const passkey = generatePasskey();
 
             // Save user data to Firebase (with blank merit rank initially)
-            db.ref('users/' + passkey).set({
+            set(ref(db, 'users/' + passkey), {
                 name: name,
                 aimID: aimID,
                 branch: branch,
@@ -204,14 +205,16 @@
             const birthdate = document.getElementById('reset-birthdate').value;
 
             // Check if AIM ID and email match in Firebase
-            db.ref('users').orderByChild('aimID').equalTo(aimID).once('value', function(snapshot) {
+            const usersRef = ref(db, 'users');
+            const q = query(usersRef, orderByChild('aimID'), equalTo(aimID));
+            get(q).then((snapshot) => {
                 let found = false;
-                snapshot.forEach(function(childSnapshot) {
+                snapshot.forEach((childSnapshot) => {
                     const userData = childSnapshot.val();
                     if (userData.email === email && userData.birthdate === birthdate) {
                         found = true;
                         const newPasskey = generatePasskey();
-                        db.ref('users/' + childSnapshot.key).update({ passkey: newPasskey });
+                        update(ref(db, 'users/' + childSnapshot.key), { passkey: newPasskey });
 
                         const resetResult = document.getElementById('reset-result');
                         resetResult.innerHTML = `
@@ -220,14 +223,11 @@
                         `;
                     }
                 });
+
                 if (!found) {
-                    const resetResult = document.getElementById('reset-result');
-                    resetResult.innerHTML = `<p style="color:red;">Invalid details provided!</p>`;
+                    document.getElementById('reset-result').innerHTML = '<p>User not found or incorrect details provided.</p>';
                 }
             });
-
-            // Reset form
-            document.getElementById('reset-passkey-form').reset();
         });
 
         // Handle view AIM ID form submission
@@ -236,50 +236,39 @@
             
             const passkey = document.getElementById('passkey').value;
 
-            // Retrieve AIM ID using passkey from Firebase
-            db.ref('users/' + passkey).once('value', function(snapshot) {
-                const data = snapshot.val();
-                if (data) {
-                    const viewResult = document.getElementById('view-result');
-                    viewResult.innerHTML = `
-                        <p><strong>AIM ID:</strong> ${data.aimID}</p>
-                        <p><strong>Name:</strong> ${data.name}</p>
-                    `;
+            // Retrieve user data based on passkey
+            const passkeyRef = ref(db, 'users/' + passkey);
+            get(passkeyRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    document.getElementById('view-result').innerHTML = `<p><strong>Your AIM ID:</strong> ${userData.aimID}</p>`;
                 } else {
-                    const viewResult = document.getElementById('view-result');
-                    viewResult.innerHTML = `<p style="color:red;">Invalid Passkey!</p>`;
+                    document.getElementById('view-result').innerHTML = '<p>Passkey not found or invalid.</p>';
                 }
             });
-
-            // Reset form
-            document.getElementById('view-id-form').reset();
         });
 
-        // Handle view profile form submission
+        // Handle view profile & merit rank form submission
         document.getElementById('view-profile-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const passkey = document.getElementById('profile-passkey').value;
 
-            // Retrieve profile and merit rank using passkey from Firebase
-            db.ref('users/' + passkey).once('value', function(snapshot) {
-                const data = snapshot.val();
-                if (data) {
-                    const profileResult = document.getElementById('profile-result');
-                    profileResult.innerHTML = `
-                        <p><strong>Name:</strong> ${data.name}</p>
-                        <p><strong>AIM ID:</strong> ${data.aimID}</p>
-                        <p><strong>Email:</strong> ${data.email}</p>
-                        <p><strong>Merit Rank:</strong> ${data.meritRank || "Not assigned yet"}</p>
+            // Retrieve user profile data from Firebase
+            const profileRef = ref(db, 'users/' + passkey);
+            get(profileRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const profileData = snapshot.val();
+                    document.getElementById('profile-result').innerHTML = `
+                        <p><strong>Name:</strong> ${profileData.name}</p>
+                        <p><strong>Branch Code:</strong> ${profileData.branch}</p>
+                        <p><strong>Enrollment Year:</strong> ${profileData.year}</p>
+                        <p><strong>Merit Rank:</strong> ${profileData.meritRank || 'Not available yet'}</p>
                     `;
                 } else {
-                    const profileResult = document.getElementById('profile-result');
-                    profileResult.innerHTML = `<p style="color:red;">Invalid Passkey!</p>`;
+                    document.getElementById('profile-result').innerHTML = '<p>Passkey not found or invalid.</p>';
                 }
             });
-
-            // Reset form
-            document.getElementById('view-profile-form').reset();
         });
     </script>
 </body>
