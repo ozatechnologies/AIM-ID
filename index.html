@@ -3,15 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIM ID Sign Up with Firebase</title>
+    <title>AIM ID</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 0;
+            background: rgba(0, 0, 0, 0.7); /* Transparent black background */
+            color: white; /* White text */
         }
         .container {
             max-width: 600px;
-            margin: 0 auto;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8); /* Darker transparent background for the container */
+            border-radius: 8px;
+        }
+        h2 {
+            border-bottom: 2px solid #007BFF;
+            padding-bottom: 10px;
+        }
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .menu a {
+            text-decoration: none;
+            color: #007BFF; /* Link color */
+            padding: 10px;
+            background: transparent;
+            border: 1px solid #007BFF; /* Button-like appearance */
+            text-align: center;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .menu a:hover {
+            background: #007BFF; /* Button hover color */
+            color: white;
         }
         .form-group {
             margin-bottom: 15px;
@@ -24,6 +53,10 @@
             width: 100%;
             padding: 8px;
             box-sizing: border-box;
+            border: 1px solid #007BFF; /* Input border color */
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1); /* Transparent white background */
+            color: white; /* Input text color */
         }
         button {
             padding: 10px 20px;
@@ -31,9 +64,11 @@
             color: white;
             border: none;
             cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.3s;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #0056b3; /* Button hover color */
         }
         .result {
             margin-top: 20px;
@@ -42,8 +77,15 @@
 </head>
 <body>
     <div class="container">
-        <h2>Sign Up for AIM ID</h2>
-        <div id="signup-section">
+        <h2>AIM ID Management</h2>
+        <div class="menu">
+            <a href="#" id="signup-link">Sign Up for AIM ID</a>
+            <a href="#" id="reset-passkey-link">Reset Passkey</a>
+            <a href="#" id="view-id-link">View Your AIM ID</a>
+            <a href="#" id="view-profile-link">View Profile & Merit Rank</a>
+        </div>
+
+        <div id="signup-section" style="display: none;">
             <form id="signup-form">
                 <div class="form-group">
                     <label for="name">Name:</label>
@@ -70,8 +112,7 @@
             <div id="result" class="result"></div>
         </div>
 
-        <h2>Reset Passkey</h2>
-        <div id="reset-passkey-section">
+        <div id="reset-passkey-section" style="display: none;">
             <form id="reset-passkey-form">
                 <div class="form-group">
                     <label for="reset-aim-id">AIM ID:</label>
@@ -90,8 +131,7 @@
             <div id="reset-result" class="result"></div>
         </div>
 
-        <h2>View Your AIM ID</h2>
-        <div id="view-id-section">
+        <div id="view-id-section" style="display: none;">
             <form id="view-id-form">
                 <div class="form-group">
                     <label for="passkey">Enter Your Passkey:</label>
@@ -102,9 +142,7 @@
             <div id="view-result" class="result"></div>
         </div>
 
-        <!-- New Feature: View Profile and Merit Rank -->
-        <h2>View Profile & Merit Rank</h2>
-        <div id="view-profile-section">
+        <div id="view-profile-section" style="display: none;">
             <form id="view-profile-form">
                 <div class="form-group">
                     <label for="profile-passkey">Enter Your Passkey:</label>
@@ -159,117 +197,140 @@
             return result;
         }
 
+        // Function to show specific section
+        function showSection(sectionId) {
+            document.getElementById('signup-section').style.display = 'none';
+            document.getElementById('reset-passkey-section').style.display = 'none';
+            document.getElementById('view-id-section').style.display = 'none';
+            document.getElementById('view-profile-section').style.display = 'none';
+            document.getElementById(sectionId).style.display = 'block';
+        }
+
+        // Event listeners for menu links
+        document.getElementById('signup-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('signup-section');
+        });
+
+        document.getElementById('reset-passkey-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('reset-passkey-section');
+        });
+
+        document.getElementById('view-id-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('view-id-section');
+        });
+
+        document.getElementById('view-profile-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('view-profile-section');
+        });
+
         // Handle sign-up form submission
         document.getElementById('signup-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const name = document.getElementById('name').value;
             const branch = document.getElementById('branch').value;
             const year = document.getElementById('year').value;
             const email = document.getElementById('email').value;
             const birthdate = document.getElementById('birthdate').value;
 
-            // Generate AIM ID and Passkey
             const aimID = generateAIMID(name, year, branch);
             const passkey = generatePasskey();
 
-            // Save user data to Firebase (with blank merit rank initially)
-            set(ref(db, 'users/' + passkey), {
+            // Save to Firebase
+            set(ref(db, 'users/' + aimID), {
                 name: name,
-                aimID: aimID,
                 branch: branch,
                 year: year,
                 email: email,
                 birthdate: birthdate,
-                meritRank: ""  // Initially blank
+                passkey: passkey
+            }).then(() => {
+                document.getElementById('result').innerText = `AIM ID: ${aimID}, Passkey: ${passkey}`;
+                document.getElementById('signup-form').reset();
+            }).catch((error) => {
+                console.error("Error saving to database: ", error);
             });
-
-            // Display result
-            const result = document.getElementById('result');
-            result.innerHTML = `
-                <p><strong>AIM ID:</strong> ${aimID}</p>
-                <p><strong>Passkey:</strong> ${passkey}</p>
-                <p>Keep your passkey safe to view your AIM ID later.</p>
-            `;
-
-            // Reset form
-            document.getElementById('signup-form').reset();
         });
 
         // Handle reset passkey form submission
         document.getElementById('reset-passkey-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const aimID = document.getElementById('reset-aim-id').value;
             const email = document.getElementById('reset-email').value;
             const birthdate = document.getElementById('reset-birthdate').value;
 
-            // Check if AIM ID and email match in Firebase
-            const usersRef = ref(db, 'users');
-            const q = query(usersRef, orderByChild('aimID'), equalTo(aimID));
-            get(q).then((snapshot) => {
-                let found = false;
-                snapshot.forEach((childSnapshot) => {
-                    const userData = childSnapshot.val();
-                    if (userData.email === email && userData.birthdate === birthdate) {
-                        found = true;
-                        const newPasskey = generatePasskey();
-                        update(ref(db, 'users/' + childSnapshot.key), { passkey: newPasskey });
-
-                        const resetResult = document.getElementById('reset-result');
-                        resetResult.innerHTML = `
-                            <p><strong>New Passkey:</strong> ${newPasskey}</p>
-                            <p>Your passkey has been successfully reset.</p>
-                        `;
-                    }
-                });
-
-                if (!found) {
-                    document.getElementById('reset-result').innerHTML = '<p>User not found or incorrect details provided.</p>';
+            // Update passkey in Firebase
+            const userRef = ref(db, 'users/' + aimID);
+            get(userRef).then((snapshot) => {
+                if (snapshot.exists() && snapshot.val().email === email && snapshot.val().birthdate === birthdate) {
+                    const newPasskey = generatePasskey();
+                    update(userRef, { passkey: newPasskey }).then(() => {
+                        document.getElementById('reset-result').innerText = `New Passkey: ${newPasskey}`;
+                        document.getElementById('reset-passkey-form').reset();
+                    }).catch((error) => {
+                        console.error("Error updating passkey: ", error);
+                    });
+                } else {
+                    document.getElementById('reset-result').innerText = 'Invalid AIM ID or details.';
                 }
+            }).catch((error) => {
+                console.error("Error fetching user data: ", error);
             });
         });
 
         // Handle view AIM ID form submission
         document.getElementById('view-id-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const passkey = document.getElementById('passkey').value;
 
-            // Retrieve user data based on passkey
-            const passkeyRef = ref(db, 'users/' + passkey);
-            get(passkeyRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const userData = snapshot.val();
-                    document.getElementById('view-result').innerHTML = `<p><strong>Your AIM ID:</strong> ${userData.aimID}</p>`;
+            // Fetch all users and check for the passkey
+            const usersRef = ref(db, 'users');
+            get(usersRef).then((snapshot) => {
+                let foundID = null;
+                snapshot.forEach((childSnapshot) => {
+                    if (childSnapshot.val().passkey === passkey) {
+                        foundID = childSnapshot.key;
+                    }
+                });
+
+                if (foundID) {
+                    document.getElementById('view-result').innerText = `Your AIM ID: ${foundID}`;
                 } else {
-                    document.getElementById('view-result').innerHTML = '<p>Passkey not found or invalid.</p>';
+                    document.getElementById('view-result').innerText = 'Invalid Passkey.';
                 }
+            }).catch((error) => {
+                console.error("Error fetching users: ", error);
             });
         });
 
-        // Handle view profile & merit rank form submission
+        // Handle view profile form submission
         document.getElementById('view-profile-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const passkey = document.getElementById('profile-passkey').value;
+            const profilePasskey = document.getElementById('profile-passkey').value;
 
-            // Retrieve user profile data from Firebase
-            const profileRef = ref(db, 'users/' + passkey);
-            get(profileRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const profileData = snapshot.val();
-                    document.getElementById('profile-result').innerHTML = `
-                        <p><strong>Name:</strong> ${profileData.name}</p>
-                        <p><strong>Branch Code:</strong> ${profileData.branch}</p>
-                        <p><strong>Enrollment Year:</strong> ${profileData.year}</p>
-                        <p><strong>Merit Rank:</strong> ${profileData.meritRank || 'Not available yet'}</p>
-                    `;
+            // Fetch all users and check for the passkey
+            const usersRef = ref(db, 'users');
+            get(usersRef).then((snapshot) => {
+                let userProfile = null;
+                snapshot.forEach((childSnapshot) => {
+                    if (childSnapshot.val().passkey === profilePasskey) {
+                        userProfile = childSnapshot.val();
+                    }
+                });
+
+                if (userProfile) {
+                    document.getElementById('profile-result').innerText = `Name: ${userProfile.name}, Branch: ${userProfile.branch}, Year: ${userProfile.year}, Email: ${userProfile.email}, Birthdate: ${userProfile.birthdate}`;
                 } else {
-                    document.getElementById('profile-result').innerHTML = '<p>Passkey not found or invalid.</p>';
+                    document.getElementById('profile-result').innerText = 'Invalid Passkey.';
                 }
+            }).catch((error) => {
+                console.error("Error fetching users: ", error);
             });
         });
     </script>
+    <p>Copyright &bull;&copy; Opn Academy Management</p>
 </body>
 </html>
