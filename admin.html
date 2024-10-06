@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Credit Merit Marks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="number"], input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Admin Panel - Credit Merit Marks</h2>
+        
+        <!-- Login Section -->
+        <div id="login-section">
+            <h3>Admin Login</h3>
+            <label for="username">Username:</label>
+            <input type="text" id="username" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" required>
+            <button id="login-btn">Login</button>
+            <div id="login-message" class="form-group"></div>
+        </div>
+
+        <!-- Users List Section -->
+        <div id="users-section" class="hidden">
+            <h3>Users List</h3>
+            <table id="users-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Branch</th>
+                        <th>Year</th>
+                        <th>Email</th>
+                        <th>Merit Rank</th>
+                        <th>Credit Merit Marks</th>
+                    </tr>
+                </thead>
+                <tbody id="users-list">
+                    <!-- Users will be loaded dynamically -->
+                </tbody>
+            </table>
+
+            <!-- Form to credit merit marks -->
+            <div id="credit-section" class="form-group">
+                <h3>Credit Merit Marks to Selected User</h3>
+                <label for="merit-marks">Enter Merit Marks:</label>
+                <input type="number" id="merit-marks" required>
+                <input type="hidden" id="selected-user-passkey">
+                <button id="credit-marks-btn">Credit Marks</button>
+            </div>
+
+            <div id="result" class="form-group"></div>
+        </div>
+    </div>
+
+    <!-- Firebase integration -->
+    <script type="module">
+        // Import Firebase and its services
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+        import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAu3JiQ8WgZJUtCIOpor37OIDO1p-Z8hlA",
+            authDomain: "app-store-d1302.firebaseapp.com",
+            databaseURL: "https://app-store-d1302.firebaseio.com",
+            projectId: "app-store-d1302",
+            storageBucket: "app-store-d1302.appspot.com",
+            messagingSenderId: "984027188738",
+            appId: "1:984027188738:web:a84d6a6372a3e00ab3e11b",
+            measurementId: "G-TR1MY9S11P"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Login Functionality
+        document.getElementById('login-btn').addEventListener('click', function() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === 'admin' && password === 'd9824421371') {
+                // Show the users section and hide the login section
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('users-section').classList.remove('hidden');
+                loadUsers(); // Load users after successful login
+            } else {
+                document.getElementById('login-message').innerHTML = '<p style="color: red;">Invalid username or password.</p>';
+            }
+        });
+
+        // Load all users and display them in the table
+        function loadUsers() {
+            const usersRef = ref(db, 'users');
+            get(usersRef).then((snapshot) => {
+                const usersList = document.getElementById('users-list');
+                usersList.innerHTML = ''; // Clear existing rows
+                snapshot.forEach((childSnapshot) => {
+                    const user = childSnapshot.val();
+                    const passkey = childSnapshot.key;
+
+                    // Create table row for each user
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.name}</td>
+                        <td>${user.branch}</td>
+                        <td>${user.year}</td>
+                        <td>${user.email}</td>
+                        <td>${user.meritRank || 'Not available'}</td>
+                        <td><button class="credit-btn" data-passkey="${passkey}">Select User</button></td>
+                    `;
+                    usersList.appendChild(row);
+                });
+
+                // Attach event listeners to 'Select User' buttons
+                document.querySelectorAll('.credit-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const passkey = this.getAttribute('data-passkey');
+                        document.getElementById('selected-user-passkey').value = passkey;
+                        alert(`User selected! Now you can credit merit marks.`);
+                    });
+                });
+            });
+        }
+
+        // Handle the credit marks button
+        document.getElementById('credit-marks-btn').addEventListener('click', function() {
+            const passkey = document.getElementById('selected-user-passkey').value;
+            const meritMarks = parseInt(document.getElementById('merit-marks').value, 10);
+
+            if (!passkey || isNaN(meritMarks)) {
+                alert('Please select a user and enter valid merit marks.');
+                return;
+            }
+
+            // Fetch the selected user's data and update their merit rank
+            const userRef = ref(db, 'users/' + passkey);
+            get(userRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    const updatedMeritRank = meritMarks;
+
+                    // Update the merit rank in the database
+                    update(userRef, { meritRank: updatedMeritRank }).then(() => {
+                        document.getElementById('result').innerHTML = `<p>Merit marks successfully credited to ${userData.name}.</p>`;
+                        
+                        // Reload the table to reflect updated merit marks
+                        loadUsers(); // Reload users after crediting marks
+
+                    }).catch(error => {
+                        document.getElementById('result').innerHTML = `<p>Error updating merit marks: ${error.message}</p>`;
+                    });
+                } else {
+                    document.getElementById('result').innerHTML = '<p>User not found.</p>';
+                }
+            }).catch(error => {
+                document.getElementById('result').innerHTML = `<p>Error fetching user data: ${error.message}</p>`;
+            });
+        });
+    </script>
+</body>
+</html>
