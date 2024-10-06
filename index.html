@@ -101,6 +101,19 @@
             </form>
             <div id="view-result" class="result"></div>
         </div>
+
+        <!-- New Feature: View Profile and Merit Rank -->
+        <h2>View Profile & Merit Rank</h2>
+        <div id="view-profile-section">
+            <form id="view-profile-form">
+                <div class="form-group">
+                    <label for="profile-passkey">Enter Your Passkey:</label>
+                    <input type="text" id="profile-passkey" required>
+                </div>
+                <button type="submit">View Profile</button>
+            </form>
+            <div id="profile-result" class="result"></div>
+        </div>
     </div>
 
     <!-- Firebase integration -->
@@ -159,14 +172,15 @@
             const aimID = generateAIMID(name, year, branch);
             const passkey = generatePasskey();
 
-            // Save user data to Firebase
+            // Save user data to Firebase (with blank merit rank initially)
             db.ref('users/' + passkey).set({
                 name: name,
                 aimID: aimID,
                 branch: branch,
                 year: year,
                 email: email,
-                birthdate: birthdate
+                birthdate: birthdate,
+                meritRank: ""  // Initially blank
             });
 
             // Display result
@@ -222,22 +236,50 @@
             
             const passkey = document.getElementById('passkey').value;
 
-            // Check if passkey exists in Firebase
-            db.ref('users/' + passkey).get().then((snapshot) => {
-                if (snapshot.exists()) {
-                    const userData = snapshot.val();
+            // Retrieve AIM ID using passkey from Firebase
+            db.ref('users/' + passkey).once('value', function(snapshot) {
+                const data = snapshot.val();
+                if (data) {
                     const viewResult = document.getElementById('view-result');
                     viewResult.innerHTML = `
-                        <p><strong>Your AIM ID:</strong> ${userData.aimID}</p>
+                        <p><strong>AIM ID:</strong> ${data.aimID}</p>
+                        <p><strong>Name:</strong> ${data.name}</p>
                     `;
                 } else {
                     const viewResult = document.getElementById('view-result');
-                    viewResult.innerHTML = `<p style="color:red;">Invalid passkey!</p>`;
+                    viewResult.innerHTML = `<p style="color:red;">Invalid Passkey!</p>`;
                 }
             });
 
             // Reset form
             document.getElementById('view-id-form').reset();
+        });
+
+        // Handle view profile form submission
+        document.getElementById('view-profile-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const passkey = document.getElementById('profile-passkey').value;
+
+            // Retrieve profile and merit rank using passkey from Firebase
+            db.ref('users/' + passkey).once('value', function(snapshot) {
+                const data = snapshot.val();
+                if (data) {
+                    const profileResult = document.getElementById('profile-result');
+                    profileResult.innerHTML = `
+                        <p><strong>Name:</strong> ${data.name}</p>
+                        <p><strong>AIM ID:</strong> ${data.aimID}</p>
+                        <p><strong>Email:</strong> ${data.email}</p>
+                        <p><strong>Merit Rank:</strong> ${data.meritRank || "Not assigned yet"}</p>
+                    `;
+                } else {
+                    const profileResult = document.getElementById('profile-result');
+                    profileResult.innerHTML = `<p style="color:red;">Invalid Passkey!</p>`;
+                }
+            });
+
+            // Reset form
+            document.getElementById('view-profile-form').reset();
         });
     </script>
 </body>
