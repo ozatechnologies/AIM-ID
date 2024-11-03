@@ -185,12 +185,12 @@
 
         // Function to generate unique passkey
         function generatePasskey() {
-            return generateRandomString(16);  // 16-character random passkey
+            return generateRandomString(8);  // 8-character random passkey
         }
 
         // Function to generate random alphanumeric string
         function generateRandomString(length) {
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let result = '';
             for (let i = 0; i < length; i++) {
                 result += characters.charAt(Math.floor(Math.random() * characters.length));
